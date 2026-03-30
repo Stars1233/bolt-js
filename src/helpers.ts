@@ -171,6 +171,16 @@ export function extractEventThreadTs<T extends string>(event: KnownEventFromType
 }
 
 /**
+ * Extracts ts from the event payload.
+ */
+export function extractEventTs<T extends string>(event: KnownEventFromType<T>): string | undefined {
+  if (hasStringProperty(event, 'ts')) {
+    return event.ts;
+  }
+  return undefined;
+}
+
+/**
  * Extracts the channel ID from the event payload, checking common locations where it may appear.
  *
  * TODO: When ready use this in getTypeAndConversation

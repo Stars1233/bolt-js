@@ -107,6 +107,16 @@ export function withPostMessage(spy: SinonSpy): Override {
   };
 }
 
+export function withChatStream(spy: SinonSpy): Override {
+  return {
+    '@slack/web-api': {
+      WebClient: class {
+        public chatStream = spy;
+      },
+    },
+  };
+}
+
 export function withAxiosPost(spy: SinonSpy): Override {
   return {
     axios: {

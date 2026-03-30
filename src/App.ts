@@ -12,7 +12,8 @@ import {
   type SlackCustomFunctionMiddlewareArgs,
 } from './CustomFunction';
 import type { WorkflowStep } from './WorkflowStep';
-import { createFunctionComplete, createFunctionFail, createRespond, createSay } from './context';
+import { createFunctionComplete, createFunctionFail, createRespond, createSay, createSayStream } from './context';
+import type { SayStreamFn } from './context';
 import { type ConversationStore, MemoryStore, conversationContext } from './conversation-store';
 import {
   AppInitializationError,
@@ -25,6 +26,9 @@ import {
 import {
   IncomingEventType,
   assertNever,
+  extractEventChannelId,
+  extractEventThreadTs,
+  extractEventTs,
   getTypeAndConversation,
   isBodyWithTypeEnterpriseInstall,
   isEventTypeToSkipAuthorize,
@@ -1048,6 +1052,8 @@ export default class App<AppCustomContext extends StringIndexed = StringIndexed>
     const listenerArgs: Pick<AnyMiddlewareArgs, 'body' | 'payload'> & {
       /** Say function might be set below */
       say?: SayFn;
+      /** SayStream function might be set below */
+      sayStream?: SayStreamFn;
       /** Respond function might be set below */
       respond?: RespondFn;
       /** Ack function might be set below */
@@ -1107,6 +1113,16 @@ export default class App<AppCustomContext extends StringIndexed = StringIndexed>
         listenerArgs.complete = createFunctionComplete(context, client);
         listenerArgs.fail = createFunctionFail(context, client);
         listenerArgs.inputs = eventListenerArgs.event.inputs;
+      }
+      // Set sayStream() utility - only for events with channel and thread context
+      const eventChannelId = extractEventChannelId(eventListenerArgs.event);
+      if (eventChannelId !== undefined) {
+        const threadTs = extractEventThreadTs(eventListenerArgs.event);
+        const eventTs = extractEventTs(eventListenerArgs.event);
+        const resolvedThreadTs = threadTs ?? eventTs;
+        if (resolvedThreadTs !== undefined) {
+          listenerArgs.sayStream = createSayStream(client, context, eventChannelId, resolvedThreadTs);
+        }
       }
     } else if (type === IncomingEventType.Action) {
       const actionListenerArgs = listenerArgs as SlackActionMiddlewareArgs;
